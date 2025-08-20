@@ -1,2 +1,8 @@
-# Chattrix
-A real time chatting web application built using socket.io enabling one to one text chat and image sharing with option to edit profile. 
+# Chattrix (Real Time Chat Website) | React.js, Express.js, MongoDB, Socket.io |
+
+ • Built a full-stack real-time chat application supporting one-to-one messaging.
+ • Implemented JWT-based user authentication, text as well as image sharing, updating user profiles and real-time
+ communication using WebSockets (Socket.IO).
+ • Designed a responsive UI with React.js and managed state efficiently.
+ • Used MongoDB for storing user data, messages details.
+ • Ensured smooth bi-directional messaging with proper message synchronization.
