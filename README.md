@@ -1,14 +1,14 @@
 # Chattrix – AI Powered Real-Time Chat App
 
  ## Key Features
-⚡ Real-time messaging using Socket.io
-🤖 AI Smart Reply Suggestions (Gemini API)
-🧠 Context-aware replies using last 5 messages
-🔐 JWT-based authentication
-🟢 Online/offline user presence
-📩 Message delivery & read receipts
-🖼️ Image sharing via Cloudinary
-📜 Infinite scroll for chat history
+* ⚡ Real-time messaging using Socket.io
+* 🤖 AI Smart Reply Suggestions (Gemini API)
+* 🧠 Context-aware replies using last 5 messages
+* 🔐 JWT-based authentication
+* 🟢 Online/offline user presence
+* 📩 Message delivery & read receipts
+* 🖼️ Image sharing via Cloudinary
+* 📜 Infinite scroll for chat history
 
 ## AI Feature
 
