@@ -2,9 +2,8 @@ import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 
 
-const GEMINI_API_KEY = "AIzaSyDGupjX7BwtmsMrhUrJLW2AvF64cYBcaFA"  //process.env.GEMINI_API_KEY;
-console.log("Gemini API Key:", GEMINI_API_KEY);
-
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+console.log("GEMINI_API_KEY:", GEMINI_API_KEY ? "Loaded" : "Not Loaded");
 const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
 
 export const generateReplySuggestions = async (message, history) => {
@@ -43,7 +42,7 @@ export const generateReplySuggestions = async (message, history) => {
                 contents: prompt,
             });
 
-        const text = result.text
+        const text = result.text;
         
         console.log("Gemini Raw Response:", text);
 

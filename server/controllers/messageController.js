@@ -123,7 +123,7 @@ export const sendMessage = async(req, res)=>{
 
         res.json({success: true, newMessage});
 
-        console.log("=== Starting AI Rellieess ===\n");
+        console.log("=== Starting AI Replieess ===\n");
 
         /* =========================
         🤖 AI SMART REPLY SECTION
@@ -149,6 +149,8 @@ export const sendMessage = async(req, res)=>{
 
                     history.reverse();
 
+                    console.log("Chat History for AI:", history.map(m=>`${m.senderId.toString() === senderId.toString() ? "User" : "Friend"}: ${m.text || "[Image]"}`));
+                    
                     const suggestions =
                         await generateReplySuggestions(
                             text,
