@@ -6,6 +6,7 @@ import { connectDB } from "./lib/db.js";
 import router from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
+import Message from "./models/Message.js";
 
 
 //creating express app and http server
@@ -28,11 +29,23 @@ export const userSocketMap = {};     // {userId: socketId}
 
 
 // Socket.io connection
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     const userId = socket.handshake.query.userId;
     console.log("User Connected", userId);
 
-    if(userId) userSocketMap[userId] = socket.id;
+    if(userId){
+        console.log("user ID ", userId);
+        userSocketMap[userId] = socket.id;
+
+        //  Update pending messages to delivered
+        await Message.updateMany(
+            {
+                receiverId: userId,
+                status: "sent"
+            },
+            { status: "delivered" }
+        );
+    }
     console.log(`userSocketMap: ${Object.keys(userSocketMap)}`)
     // emit online users to all connectedclients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
@@ -58,14 +71,6 @@ app.use("/api/messages", messageRouter);
 // MongoDB connection
 await connectDB();
 
-
-// ⚡ Socket.IO setup
-
-// app.use((req, res, next) => {
-//     const cleanPath = decodeURIComponent(req.path.trim());
-//     console.log(`Incoming ${req.method} request to ${cleanPath}`);
-//     next();
-// });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, ()=>{

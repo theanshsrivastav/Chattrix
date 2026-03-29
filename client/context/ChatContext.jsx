@@ -33,9 +33,7 @@ export const ChatProvider = ({children})=>{
         try {
             const {data} = await axios.get(`/api/messages/${userId}`);
             if(data.success){
-                // console.log("in getMessages :- " + data.messages);
                 setMessages(data.messages);
-                // setMessages(Array.isArray(data.message) ? data.message : []);
             }
         } catch (error) {
             toast.error(error.message);
@@ -47,53 +45,82 @@ export const ChatProvider = ({children})=>{
         try {
             const {data} = await axios.post(`/api/messages/send/${selectedUser._id}`, messageData);
             if(data.success){
-                setMessages((prevMessages)=>[...prevMessages, data.newMessage]);
-
-                // Emit to socket so receiver gets it instantly
-                if (socket) {
-                    socket.emit("sendMessage", {
-                        receiverId: selectedUser._id,
-                        message: data.newMessage
-                    });
-                }
+                //setMessages((prevMessages)=>[...prevMessages, data.newMessage]);
                 
             } else{
                 toast.error(data.message);
             }
+
         } catch (error) {
             toast(error.message);
         }
     }
 
-    // funtion to subscribe to messages for selected user
-    const subscribeToMessages = async()=>{
-        if(!socket) return;
 
-        socket.on("newMessage", (newMessage)=>{
-            if(selectedUser && newMessage.senderId === selectedUser._id){
-                newMessage.seen = true;
-                setMessages((prevMessages)=>[...prevMessages, newMessage]);
-                axios.put(`/api/messages/mark/${newMessage._id}`);
-            } else{
-                setUnseenMessages((prevUnseenMessages)=>({
-                    ...prevUnseenMessages, [newMessage.senderId] : prevUnseenMessages[newMessage.senderId] ? prevUnseenMessages[newMessage.senderId] + 1 : 1
-                }))
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewMessage = (newMessage) => {
+            console.log("=== NEW MESSAGE EVENT ===");
+            console.log("senderId:", newMessage.senderId);
+            console.log("receiverId:", newMessage.receiverId);
+            console.log("selectedUser._id:", selectedUser?._id);
+            console.log("text:", newMessage.text);
+            const isChatOpen =
+                selectedUser &&
+                (
+                    newMessage.senderId.toString() === selectedUser._id.toString() ||
+                    newMessage.receiverId.toString() === selectedUser._id.toString()
+                );
+
+            console.log("senderId match:", newMessage.senderId.toString() === selectedUser?._id.toString());
+            console.log("receiverId match:", newMessage.receiverId.toString() === selectedUser?._id.toString());
+            console.log("isChatOpen:", isChatOpen);
+
+            if (isChatOpen) {
+                console.log("✅ ADDING MESSAGE TO STATE");
+                setMessages(prev => [...prev, newMessage]);
+
+                setUnseenMessages(prev => ({
+                    ...prev,
+                    [newMessage.senderId]: 0
+                }));
+            } else {
+                console.log("❌ NOT ADDING - different chat");
+                setUnseenMessages(prev => ({
+                    ...prev,
+                    [newMessage.senderId]:
+                        prev[newMessage.senderId]
+                            ? prev[newMessage.senderId] + 1
+                            : 1
+                }));
             }
-        })
-    }
+        };
 
-    // function to unsubscribe from messages 
-    const unsubscribeFromMessages = ()=>{
-        if(socket) socket.off("newMessage");
-    }
+        const handleMessagesRead = ({ readerId }) => {
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg.receiverId.toString() === readerId.toString()
+                        ? { ...msg, status: "read" }
+                        : msg
+                )
+            );
+        };
 
-    useEffect(()=>{
-        subscribeToMessages();
-        return ()=> unsubscribeFromMessages();
-    },[socket, selectedUser]);
+        socket.on("newMessage", handleNewMessage);
+        socket.on("messagesRead", handleMessagesRead);
+
+        return () => {
+            socket.off("newMessage", handleNewMessage);
+            socket.off("messagesRead", handleMessagesRead);
+        };
+
+    }, [socket, selectedUser]);
+
+
 
     const value = {
-        messages, users, selectedUser, getUsers, getMessages, sendMessage, setSelectedUser, unseenMessages, setUnseenMessages
+        messages, users, selectedUser, getUsers, getMessages, sendMessage, setSelectedUser, unseenMessages, setUnseenMessages, setMessages
     }
 
     return(

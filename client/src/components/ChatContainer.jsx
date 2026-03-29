@@ -6,12 +6,14 @@ import { AuthContext } from '../../context/AuthContext';
 
 const ChatContainer = () => {
 
-    const {messages, selectedUser, setSelectedUser, sendMessage, getMessages} = useContext(ChatContext);
-    const {authUser, onlineUsers} = useContext(AuthContext);
+    const {messages, selectedUser, setSelectedUser, sendMessage, getMessages, setMessages} = useContext(ChatContext);
+    const {authUser, onlineUsers, socket} = useContext(AuthContext);
 
     const scrollEnd = useRef();
 
     const [input, setInput] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+
 
     // handle sending a message
     const handleSendMessage = async(e)=>{
@@ -21,6 +23,7 @@ const ChatContainer = () => {
         await sendMessage({text: input.trim()});
         console.log(`input send===`)
         setInput("");
+        setSuggestions([]);
     }
 
     // handle sending an image
@@ -42,16 +45,38 @@ const ChatContainer = () => {
     useEffect(()=>{
         if(selectedUser){
             getMessages(selectedUser._id);
+            setSuggestions([]);             // Clear AI suggestions when a new user is selected
         }
     },[selectedUser]);
 
+
     useEffect(()=>{
-        if(scrollEnd.current && messages){
-            scrollEnd.current.scrollIntoView({behavior: "smooth"});
-        }
-    },[messages]);
+        setTimeout(()=>{
+            scrollEnd.current?.scrollIntoView({
+                behavior:"smooth"
+            });
+        },100);
+    },[messages, suggestions]);
 
     console.log("Messages :- "+ messages);
+
+
+    useEffect(() => {
+
+        if(!socket || !selectedUser) return;
+
+        const handleSuggestions = (data)=>{
+            console.log("🎯 Suggestions received:", data);
+            setSuggestions(data);
+        };
+
+        socket.on("aiSuggestions", handleSuggestions);
+
+        return ()=>{
+            socket.off("aiSuggestions", handleSuggestions);
+        };
+
+    }, [socket, selectedUser]);
 
     return selectedUser 
     ? 
@@ -72,17 +97,40 @@ const ChatContainer = () => {
             {/*---------------chat area---------------  */}
             <div className='flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6'>
                     {messages.map((msg, index)=>(
-                        <div key={index} className={`flex items-end gap-2 justify-end ${msg.senderId !== authUser._id && 'flex-row-reverse'}`}>
+                        <div key={index} className={`flex items-end gap-2 justify-end ${msg.senderId.toString() !== authUser._id.toString() && 'flex-row-reverse'}`}>
                             {msg.image ? (
                                 <img src= {msg.image} alt="" className='max-w-[230px] border border-gray-700 rounded-lg overflow-hidden mb-8'/>
                             ) : (
-                                <p className={`p-2 max-w-[200px] md:text-sm font-light rounded-lg mb-8 break-all bg-violet-500/70 text-white ${msg.senderId === authUser._id ? 'rounded-br-none' : 'rounded-bl-none'}`}>{msg.text}</p>
+                                <p className={`p-2 max-w-[200px] md:text-sm font-light rounded-lg mb-8 break-all bg-violet-500/70 text-white ${msg.senderId.toString() === authUser._id.toString() ? 'rounded-br-none' : 'rounded-bl-none'}`}>{msg.text}</p>
                             )}
 
-                            <div className='text-center text-xs'>
-                                <img src={msg.senderId === authUser._id ? authUser?.profilePic || assets.avatar_icon : selectedUser?.profilePic || assets.avatar_icon} alt="" className='w-7 rounded-full'/>
-                                <p className='text-gray-500'>{formatMessageTime(msg.createdAt)}</p>
+
+                            <div className='text-center text-xs flex flex-col items-center'>
+                                <img 
+                                    src={
+                                        msg.senderId.toString() === authUser._id.toString()
+                                            ? authUser?.profilePic || assets.avatar_icon
+                                            : selectedUser?.profilePic || assets.avatar_icon
+                                    }
+                                    alt=""
+                                    className='w-7 rounded-full'
+                                />
+                                
+                                <p className='text-gray-500'>
+                                    {formatMessageTime(msg.createdAt)}
+                                </p>
+
+                                {/*  Message Status (ONLY for sender) */}
+                                {msg.senderId.toString() === authUser._id.toString() && (
+                                    <span className='text-[10px] text-gray-400 mt-1'>
+                                        {msg.status === "sent" && "🕓"}
+                                        {msg.status === "delivered" && "✓"}
+                                        {msg.status === "read" && "✓✓"}
+                                    </span>
+                                )}
                             </div>
+
+
 
                         </div>
                     ))}
@@ -92,6 +140,24 @@ const ChatContainer = () => {
             </div>
 
             {/* ------------bottom area----------- */}
+
+            {/* AI Suggestions */}
+            {suggestions.length > 0 && (
+                <div className="flex gap-2 px-3 mb-2 flex-wrap">
+                    {suggestions.map((reply, index) => (
+                        <button
+                            key={index}
+                            onClick={()=>{
+                                sendMessage({text: reply});
+                                setSuggestions([]);
+                            }}
+                            className="bg-violet-600/30 text-white px-3 py-1 rounded-full text-xs hover:bg-violet-600/50 transition"
+                        >
+                            {reply}
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className='absolut bottom-0 left-0 right-0 flex items-center gap-3'>
                 <div className='bg-[#282142] ml-1 rounded-full flex-1 flex items-center px-3 rounded-full'>
                     <input onChange={(e)=>setInput(e.target.value)} value={input} onKeyDown={(e)=>e.key === "Enter" ? handleSendMessage(e) : null} type="text" placeholder='Send a message' className='flex-1 text-sm p-3 border-none rounded-lg outline-none text-white placeholder-gray-400'/>
@@ -102,6 +168,7 @@ const ChatContainer = () => {
                 </div>
                 <img onClick={handleSendMessage} src={assets.send_button} className='w-10 rounded-full cursor-pointer'/>
             </div>
+
         </div>
     )
     : 
